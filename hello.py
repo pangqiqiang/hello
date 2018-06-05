@@ -17,6 +17,12 @@ from wtforms.validators import Required
 import os
 from threading import Thread
 
+from flask_sqlalchemy import SQLAlchemy
+import os
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -36,17 +42,24 @@ app.config['FLASKY_MAIL_SENDER'] = 'Flasky Admin <78733149@qq.com>'
 app.config['FLASKY_ADMIN'] = 'pangqiqiang1234@163.com'
 
 
+'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
+db = SQLAlchemy(app)
+>>>>>>> f0ec9641a7e2cc2f139ec144ef156fb67aa64b06
 bootstrap = Bootstrap(app)
 moment = Moment(app)
 db = SQLAlchemy(app)
 mail = Mail(app)
 
 
-# class for wtforms
+#####wtforms class
+>>>>>>> f0ec9641a7e2cc2f139ec144ef156fb67aa64b06
 class NameForm(Form):
     name = StringField("What is your name?", validators=[Required()])
     submit = SubmitField("Submit")
 
+<<<<<<< HEAD
 
 # sqlalchemy对象模型类
 class Role(db.Model):
@@ -82,10 +95,26 @@ def send_email(to, subject, template, **kwargs):
 	thr.start()
 	return thr
 
+=======
+######sqlalchemy classes
+class Role(db.Model):
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+    def __repr__(self):
+        return '<ROLE %r>' % self.name
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    def __repr__(self):
+        return '<User %r>' % self.username
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    name = None
     form = NameForm()
     if form.validate_on_submit():
         old_name = session.get("name")
@@ -94,13 +123,17 @@ def index():
         if app.config['FLASKY_ADMIN']:
             send_email(app.config['FLASKY_ADMIN'], 'New User',
                        'mail/new_user', user=form.name.data)
-
+		user = User.query.filter_by(username=form.name.data).first()
+        if user is None:
+            user = User(username=form.name.data)
+            db.session.add(user)
+            session['known'] = False
+        else:
+            session['known'] = True
         session["name"] = form.name.data
         return redirect(url_for("index"))
-
     return render_template("index.html",
                            current_time=datetime.utcnow(), form=form, name=session.get("name"))
-
 
 @app.route("/user/<name>")
 def user(name):
